@@ -104,6 +104,12 @@ export default function BotPage({ bot }: { bot: Bot }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: content }),
         })
+
+        const ct = response.headers.get('content-type') || ''
+        if (!ct.includes('application/json')) {
+          throw new Error('خطأ في الخادم - أضف GEMINI_API_KEY في Vercel وأعد النشر')
+        }
+
         const data = await response.json()
         if (data.error) {
           setMessages([...newMessages, { role: 'assistant', content: `❌ ${data.error}` }])
@@ -117,13 +123,19 @@ export default function BotPage({ bot }: { bot: Bot }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ messages: chatMessages, systemPrompt: bot.systemPrompt }),
         })
+
+        const ct = response.headers.get('content-type') || ''
+        if (!ct.includes('application/json')) {
+          throw new Error('مفتاح GEMINI_API_KEY غير موجود - أضفه في Vercel من Settings ثم أعد النشر')
+        }
+
         const data = await response.json()
         if (!response.ok) throw new Error(data.error || 'خطأ في الاستجابة')
         const replyText = data.choices?.[0]?.message?.content || 'عذراً، لم أتلقَّ رداً.'
         setMessages([...newMessages, { role: 'assistant', content: replyText }])
       }
     } catch (err: any) {
-      toast.error(err.message || 'حدث خطأ غير متوقع')
+      toast.error(err.message || 'حدث خطأ غير متوقع', { duration: 5000 })
       setMessages(newMessages.slice(0, -1))
       setInput(content)
     } finally {
@@ -273,4 +285,4 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
   const bot = BOTS.find((b) => b.id === params?.id)
   if (!bot) return { notFound: true }
   return { props: { bot } }
-  }
+}
