@@ -29,24 +29,41 @@ export default async function handler(
   }
 
   try {
+    // محاولة أولى: cobalt API
     const cobaltResponse = await fetch('https://api.cobalt.tools/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ url, videoQuality: '720', filenameStyle: 'pretty' })
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0'
+      },
+      body: JSON.stringify({
+        url: url,
+        videoQuality: '720',
+        filenameStyle: 'pretty',
+        downloadMode: 'auto'
+      })
     })
 
     if (cobaltResponse.ok) {
       const cobaltData = await cobaltResponse.json()
-
-      if (cobaltData.status === 'stream' || cobaltData.status === 'redirect') {
-        return res.status(200).json({ success: true, downloadUrl: cobaltData.url, platform: detectPlatform(url) })
+      if (cobaltData.status === 'stream' || cobaltData.status === 'redirect' || cobaltData.status === 'tunnel') {
+        return res.status(200).json({
+          success: true,
+          downloadUrl: cobaltData.url,
+          platform: detectPlatform(url)
+        })
       }
-
       if (cobaltData.status === 'picker' && cobaltData.picker?.length > 0) {
-        return res.status(200).json({ success: true, downloadUrl: cobaltData.picker[0].url, platform: detectPlatform(url) })
+        return res.status(200).json({
+          success: true,
+          downloadUrl: cobaltData.picker[0].url,
+          platform: detectPlatform(url)
+        })
       }
     }
 
+    // إذا فشل أعط روابط بديلة
     return res.status(200).json({
       success: false,
       fallback: true,
@@ -94,4 +111,4 @@ function getAlternatives(url: string): { name: string; link: string }[] {
     ]
   }
   return [{ name: 'Cobalt Tools', link: 'https://cobalt.tools' }]
-  }
+}
